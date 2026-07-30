@@ -95,11 +95,7 @@
           <input type="text" id="car-type-other" placeholder="ระบุประเภทรถ..." class="border p-2 rounded w-full mt-2 hidden">
         </div>
 
-        <select id="car-location" onchange="fetchPlans()" class="border p-2 rounded w-full">
-          <option value="กทม.">ป้ายทะเบียน กทม.</option>
-          <option value="ตจว.">ป้ายทะเบียน ต่างจังหวัด</option>
-        </select>
-      </div>
+        <input type="text" id="car-location" placeholder="ระบุพื้นที่/เงื่อนไข (เช่น กทม., 2-20 ปี)" oninput="fetchPlans()" class="border p-2 rounded w-full bg-white">
 
       <!-- แถวที่ 4: ทุนประกัน และ เบี้ยรวมสุทธิ -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
