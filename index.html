@@ -59,7 +59,8 @@
     <div class="mb-6 p-4 bg-gray-50 rounded border no-print">
       <h3 class="font-bold mb-3 text-gray-800">1. เลือกแบบประกันและเงื่อนไขรถยนต์</h3>
       
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+      <!-- แถวที่ 1: ประเภทประกัน และ เลือกบริษัทประกัน -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
         <select id="ins-type" onchange="fetchPlans()" class="border p-2 rounded w-full">
           <option value="">-- ประเภทประกัน --</option>
           <option value="ประเภท 1">ประเภท 1</option>
@@ -69,12 +70,30 @@
           <option value="ประเภท 3+ พลัส">ประเภท 3+ พลัส</option>
         </select>
 
-        <select id="car-type" onchange="fetchPlans()" class="border p-2 rounded w-full">
-          <option value="เก๋ง">รถเก๋ง</option>
-          <option value="กระบะ">รถกระบะ</option>
-          <option value="ตู้">รถตู้</option>
-          <option value="อื่นๆ">อื่นๆ</option>
+        <select id="ins-company" onchange="fetchPlans()" class="border p-2 rounded w-full">
+          <option value="">-- เลือกบริษัทฯ ประกัน --</option>
         </select>
+      </div>
+
+      <!-- แถวที่ 2: เลือกแผนประกัน -->
+      <div class="mb-3">
+        <select id="ins-plan" onchange="onPlanSelected()" class="border p-2 rounded w-full">
+          <option value="">-- เลือกแผนประกัน --</option>
+        </select>
+      </div>
+
+      <!-- แถวที่ 3: ประเภทรถ (เลือกอื่นๆ พิมพ์ได้) และ พื้นที่ป้ายทะเบียน -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+        <div>
+          <select id="car-type" onchange="checkCarTypeOther(); fetchPlans();" class="border p-2 rounded w-full">
+            <option value="เก๋ง">รถเก๋ง</option>
+            <option value="กระบะ">รถกระบะ</option>
+            <option value="ตู้">รถตู้</option>
+            <option value="อื่นๆ">อื่นๆ (ระบุเอง)</option>
+          </select>
+          <!-- ช่องพิมพ์เพิ่มกรณีเลือกอื่นๆ -->
+          <input type="text" id="car-type-other" placeholder="ระบุประเภทรถ..." class="border p-2 rounded w-full mt-2 hidden">
+        </div>
 
         <select id="car-location" onchange="fetchPlans()" class="border p-2 rounded w-full">
           <option value="กทม.">ป้ายทะเบียน กทม.</option>
@@ -82,15 +101,8 @@
         </select>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
-        <select id="ins-company" onchange="fetchPlans()" class="border p-2 rounded w-full">
-          <option value="">-- เลือกบริษัทฯ ประกัน --</option>
-        </select>
-
-        <select id="ins-plan" onchange="onPlanSelected()" class="border p-2 rounded w-full">
-          <option value="">-- เลือกแผนประกัน --</option>
-        </select>
-
+      <!-- แถวที่ 4: ทุนประกัน และ เบี้ยรวมสุทธิ -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
         <input type="text" id="ins-sum-insured" placeholder="ทุนประกัน (พิมพ์กรอกเองได้)" class="border p-2 rounded w-full bg-white">
         <input type="number" id="ins-premium" placeholder="เบี้ยรวมสุทธิ (บาท)" class="border p-2 rounded w-full bg-yellow-50">
       </div>
@@ -577,6 +589,19 @@
         if(result.status === 'success') loadAgentQuotations();
       });
     }
+
+    // ฟังก์ชันเช็คว่าถ้าเลือกประเภทรถเป็น "อื่นๆ" ให้แสดงช่องกรอกข้อความ
+  function checkCarTypeOther() {
+    const carTypeSelect = document.getElementById('car-type');
+    const otherInput = document.getElementById('car-type-other');
+    if (carTypeSelect.value === 'อื่นๆ') {
+      otherInput.classList.remove('hidden');
+      otherInput.focus();
+    } else {
+      otherInput.classList.add('hidden');
+      otherInput.value = '';
+    }
+  }
   </script>
 </body>
 </html>
