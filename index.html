@@ -60,15 +60,12 @@
       <h3 class="font-bold mb-3 text-gray-800">1. เลือกแบบประกันและเงื่อนไขรถยนต์</h3>
       
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+        <!-- ประเภทประกันดึงจากชีตอัตโนมัติ (รองรับ พ.ร.บ., Non Motor, ประกันชีวิต, ประกันสุขภาพ ฯลฯ) -->
         <select id="ins-type" onchange="fetchPlans()" class="border p-2 rounded w-full">
           <option value="">-- ประเภทประกัน --</option>
-          <option value="ประเภท 1">ประเภท 1</option>
-          <option value="ประเภท 2">ประเภท 2</option>
-          <option value="ประเภท 2+ พลัส">ประเภท 2+ พลัส</option>
-          <option value="ประเภท 3">ประเภท 3</option>
-          <option value="ประเภท 3+ พลัส">ประเภท 3+ พลัส</option>
         </select>
 
+        <!-- บริษัทประกันดึงจากชีตอัตโนมัติ -->
         <select id="ins-company" onchange="fetchPlans()" class="border p-2 rounded w-full">
           <option value="">-- เลือกบริษัทฯ ประกัน --</option>
         </select>
@@ -202,7 +199,7 @@
         <div id="image-output" class="border p-2 rounded bg-gray-50 flex justify-center"></div>
       </div>
 
-      <!-- ปุ่มจัดการใน Modal A4 (แสดงผลชุดเดียวเรียบร้อย) -->
+      <!-- ปุ่มจัดการใน Modal A4 -->
       <div class="flex flex-col md:flex-row gap-2 mt-4">
         <button onclick="convertA4ToImage()" class="w-full bg-red-600 text-white py-2 rounded font-bold hover:bg-red-700">📥 แปลงตารางเป็นรูปภาพ (เซฟ/แชร์)</button>
         <button onclick="sendFlexFromPreview()" class="w-full bg-green-600 text-white py-2 rounded font-bold hover:bg-green-700">💬 ส่ง Flex Message ให้ลูกค้า</button>
@@ -281,7 +278,7 @@
           if (currentAgent.status === 'Active') {
             document.getElementById('agent-info-display').innerText = `ตัวแทน: ${currentAgent.name} (ระดับ: ${currentAgent.level})`;
             document.getElementById('app-section').classList.remove('hidden');
-            loadCompanies();
+            loadMetadata(); // 🟢 โหลดทั้งบริษัทและประเภทประกันจากชีตอัตโนมัติ
             loadAgentQuotations();
           } else {
             document.getElementById('pending-section').classList.remove('hidden');
@@ -313,7 +310,8 @@
       });
     }
 
-    function loadCompanies() {
+    // 🟢 ฟังก์ชันใหม่: ดึงรายชื่อบริษัทและประเภทประกันจาก Google Sheet อัตโนมัติ
+    function loadMetadata() {
       fetch(GAS_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -322,11 +320,23 @@
       .then(res => res.json())
       .then(result => {
         if(result.status === 'success') {
-          const select = document.getElementById('ins-company');
-          select.innerHTML = '<option value="">-- เลือกบริษัทฯ ประกัน --</option>';
-          result.companies.forEach(comp => {
-            select.innerHTML += `<option value="${comp}">${comp}</option>`;
-          });
+          // เติมบริษัทประกัน
+          const selectComp = document.getElementById('ins-company');
+          selectComp.innerHTML = '<option value="">-- เลือกบริษัทฯ ประกัน --</option>';
+          if(result.companies) {
+            result.companies.forEach(comp => {
+              selectComp.innerHTML += `<option value="${comp}">${comp}</option>`;
+            });
+          }
+
+          // เติมประเภทประกัน (รองรับ พ.ร.บ., Non Motor, ประกันชีวิต, ประกันสุขภาพ ฯลฯ อัตโนมัติ)
+          const selectType = document.getElementById('ins-type');
+          selectType.innerHTML = '<option value="">-- ประเภทประกัน --</option>';
+          if(result.types) {
+            result.types.forEach(type => {
+              selectType.innerHTML += `<option value="${type}">${type}</option>`;
+            });
+          }
         }
       });
     }
@@ -498,7 +508,6 @@
       document.getElementById('pdf-preview-modal').classList.add('hidden');
     }
 
-    // 1. แก้ไขฟังก์ชันบันทึกเงียบตอนพรีวิว A4 (ไม่บังคับส่งข้อความ เว้นแต่กดปุ่มส่ง)
     function autoSaveQuoteSilent() {
       const custName = document.getElementById('cust-name').value.trim();
       const carReg = document.getElementById('car-reg').value.trim();
@@ -511,7 +520,7 @@
         customerName: custName,
         carReg: carReg,
         items: comparisonItems,
-        targetUserId: "" // พรีวิว A4 บันทึกเก็บชีตเฉยๆ ยังไม่ยิงข้อความออกจนกว่าจะกดปุ่มส่ง
+        targetUserId: "" 
       };
 
       fetch(GAS_API_URL, {
@@ -528,15 +537,13 @@
       }).catch(err => console.error("AutoSave Error:", err));
     }
 
-    // 2. ฟังก์ชันกดส่ง Flex จากหน้าจอหลัก
     function saveAndSendLINE() {
       const custName = document.getElementById('cust-name').value.trim();
       const carReg = document.getElementById('car-reg').value.trim();
       if(!custName || !carReg) return alert("กรุณากรอกชื่อลูกค้าและทะเบียนรถก่อนบันทึก");
       if(comparisonItems.length === 0) return alert("กรุณาเพิ่มรายการเปรียบเทียบอย่างน้อย 1 รายการก่อนบันทึก");
 
-      // บังคับหรือเปิดช่องให้ใส่ User ID เพื่อให้ระบบรู้ว่าจะส่งหาใคร
-      const targetUserId = prompt("กรุณากรอก LINE User ID ของลูกค้าที่ต้องการส่ง Flex Message (ถ้าไม่ใส่ ระบบจะบันทึกเก็บประวัติไว้เฉยๆ):") || "";
+      const targetUserId = prompt("กรุณากรอก LINE User ID ของลูกค้าที่ต้องการส่ง Flex Message (หากไม่กรอก ระบบจะส่งเข้ากลุ่มและบันทึกประวัติให้):") || "";
       const actionType = editingQuoteId ? 'editQuote' : 'saveQuote';
 
       const quotePayload = {
@@ -545,7 +552,7 @@
         customerName: custName,
         carReg: carReg,
         items: comparisonItems,
-        targetUserId: targetUserId // ส่ง ID นี้ไปให้ GAS ยิงข้อความเข้ากลุ่มและหาลูกค้า
+        targetUserId: targetUserId
       };
 
       fetch(GAS_API_URL, {
@@ -556,11 +563,7 @@
       .then(res => res.json())
       .then(result => {
         if(result.status === 'success') {
-          if (editingQuoteId) {
-            alert(targetUserId ? "อัปเดตข้อมูลและส่ง Flex Message ให้ลูกค้าใหม่เรียบร้อยแล้ว!" : "อัปเดตข้อมูลใบเสนอราคาเรียบร้อยแล้ว!");
-          } else {
-            alert(targetUserId ? "บันทึกและส่ง Flex Message ให้ลูกค้าเรียบร้อยแล้ว!" : "บันทึกข้อมูลเรียบร้อยแล้ว!");
-          }
+          alert("บันทึกข้อมูลเรียบร้อยแล้ว!");
           editingQuoteId = null;
           comparisonItems = [];
           renderTable();
@@ -575,53 +578,6 @@
       .catch(err => {
         console.error("Save Error:", err);
         alert("ไม่สามารถเชื่อมต่อเพื่อบันทึกข้อมูลได้");
-      });
-    }
-
-    // 3. ฟังก์ชันกดส่ง Flex จากหน้าต่างพรีวิว A4 โดยตรง (ทำงานจริง 100%)
-    function sendFlexFromPreview() {
-      const custName = document.getElementById('cust-name').value.trim();
-      const carReg = document.getElementById('car-reg').value.trim();
-      if(!custName || !carReg) return alert("กรุณากรอกชื่อลูกค้าและทะเบียนรถก่อนส่ง");
-      if(comparisonItems.length === 0) return alert("ไม่มีรายการเปรียบเทียบ");
-
-      const targetUserId = prompt("กรุณากรอก LINE User ID ของลูกค้าที่ต้องการส่ง Flex Message:");
-      if (!targetUserId) return; // ถ้าไม่กรอกหรือกดยกเลิก ให้หยุดการทำงาน
-
-      const actionType = editingQuoteId ? 'editQuote' : 'saveQuote';
-      const quotePayload = {
-        quoteId: editingQuoteId || "",
-        agentId: currentAgent.id,
-        customerName: custName,
-        carReg: carReg,
-        items: comparisonItems,
-        targetUserId: targetUserId // ส่ง ID นี้ไปยิงข้อความจริง
-      };
-
-      fetch(GAS_API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: actionType, quoteData: quotePayload })
-      })
-      .then(res => res.json())
-      .then(result => {
-        if(result.status === 'success') {
-          alert("บันทึกและส่ง Flex Message ให้ลูกค้าเรียบร้อยแล้ว!");
-          closePreview(); // ปิดหน้าต่างพรีวิว
-          editingQuoteId = null;
-          comparisonItems = [];
-          renderTable();
-          document.getElementById('cust-name').value = '';
-          document.getElementById('car-reg').value = '';
-          document.getElementById('car-model').value = '';
-          loadAgentQuotations();
-        } else {
-          alert("เกิดข้อผิดพลาด: " + (result.message || "ไม่ทราบสาเหตุ"));
-        }
-      })
-      .catch(err => {
-        console.error("Preview Send Error:", err);
-        alert("ไม่สามารถเชื่อมต่อเพื่อส่งข้อความได้");
       });
     }
 
