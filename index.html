@@ -16,7 +16,7 @@
     <p class="text-gray-600 font-semibold" id="loading-text">กำลังตรวจสอบสิทธิ์ระบบ...</p>
   </div>
 
-  <!-- ส่วนฟอร์มลงทะเบียน (เด้งขึ้นมาอัตโนมัติถ้ายังไม่เคยลงทะเบียน) -->
+  <!-- ส่วนฟอร์มลงทะเบียน -->
   <div id="register-section" class="hidden max-w-md mx-auto bg-white p-6 rounded shadow mt-10">
     <h2 class="text-xl font-bold text-blue-800 mb-2 text-center">ลงทะเบียนตัวแทนใหม่</h2>
     <p class="text-xs text-gray-500 mb-4 text-center">กรุณากรอกข้อมูลเพื่อขออนุมัติใช้งานระบบ</p>
@@ -59,7 +59,6 @@
     <div class="mb-6 p-4 bg-gray-50 rounded border no-print">
       <h3 class="font-bold mb-3 text-gray-800">1. เลือกแบบประกันและเงื่อนไขรถยนต์</h3>
       
-      <!-- แถวที่ 1: ประเภทประกัน และ เลือกบริษัทประกัน -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
         <select id="ins-type" onchange="fetchPlans()" class="border p-2 rounded w-full">
           <option value="">-- ประเภทประกัน --</option>
@@ -75,14 +74,12 @@
         </select>
       </div>
 
-      <!-- แถวที่ 2: เลือกแผนประกัน -->
       <div class="mb-3">
         <select id="ins-plan" onchange="onPlanSelected()" class="border p-2 rounded w-full">
           <option value="">-- เลือกแผนประกัน --</option>
         </select>
       </div>
 
-      <!-- แถวที่ 3: ประเภทรถ (เลือกอื่นๆ พิมพ์ได้) และ พื้นที่ป้ายทะเบียน -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
         <div>
           <select id="car-type" onchange="checkCarTypeOther(); fetchPlans();" class="border p-2 rounded w-full">
@@ -91,13 +88,16 @@
             <option value="ตู้">รถตู้</option>
             <option value="อื่นๆ">อื่นๆ (ระบุเอง)</option>
           </select>
-          <!-- ช่องพิมพ์เพิ่มกรณีเลือกอื่นๆ -->
           <input type="text" id="car-type-other" placeholder="ระบุประเภทรถ..." class="border p-2 rounded w-full mt-2 hidden">
         </div>
 
-        <input type="text" id="car-location" placeholder="ระบุพื้นที่/เงื่อนไข (เช่น กทม., 2-20 ปี)" oninput="fetchPlans()" class="border p-2 rounded w-full bg-white">
+        <div id="location-container">
+          <select id="car-location" class="border p-2 rounded w-full">
+            <option value="">-- เลือกพื้นที่ / เงื่อนไข --</option>
+          </select>
+        </div>
+      </div>
 
-      <!-- แถวที่ 4: ทุนประกัน และ เบี้ยรวมสุทธิ -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
         <input type="text" id="ins-sum-insured" placeholder="ทุนประกัน (พิมพ์กรอกเองได้)" class="border p-2 rounded w-full bg-white">
         <input type="number" id="ins-premium" placeholder="เบี้ยรวมสุทธิ (บาท)" class="border p-2 rounded w-full bg-yellow-50">
@@ -202,13 +202,15 @@
         <div id="image-output" class="border p-2 rounded bg-gray-50 flex justify-center"></div>
       </div>
 
+      <!-- ปุ่มจัดการใน Modal A4 (แสดงผลชุดเดียวเรียบร้อย) -->
       <div class="flex flex-col md:flex-row gap-2 mt-4">
         <button onclick="convertA4ToImage()" class="w-full bg-red-600 text-white py-2 rounded font-bold hover:bg-red-700">📥 แปลงตารางเป็นรูปภาพ (เซฟ/แชร์)</button>
+        <button onclick="sendFlexFromPreview()" class="w-full bg-green-600 text-white py-2 rounded font-bold hover:bg-green-700">💬 ส่ง Flex Message ให้ลูกค้า</button>
         <button onclick="closePreview()" class="w-full bg-gray-300 text-gray-700 py-2 rounded font-bold hover:bg-gray-400">ปิดหน้าต่าง</button>
       </div>
     </div>
   </div>
-
+    
   <script>
     let currentAgent = null;
     let currentUserLineId = "";
@@ -274,7 +276,6 @@
       .then(res => res.json())
       .then(result => {
         document.getElementById('loading-section').classList.add('hidden');
-        
         if (result.status === 'success' && result.data) {
           currentAgent = result.data;
           if (currentAgent.status === 'Active') {
@@ -286,7 +287,6 @@
             document.getElementById('pending-section').classList.remove('hidden');
           }
         } else {
-          // ถ้าไม่พบข้อมูลในระบบเลย -> เด้งเปิดฟอร์มลงทะเบียนอัตโนมัติ
           document.getElementById('reg-uid').value = uid;
           document.getElementById('register-section').classList.remove('hidden');
         }
@@ -301,10 +301,7 @@
       fetch(GAS_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ 
-          action: 'register', 
-          formData: { name: name, phone: phone, uid: currentUserLineId } 
-        })
+        body: JSON.stringify({ action: 'register', formData: { name: name, phone: phone, uid: currentUserLineId } })
       })
       .then(res => res.json())
       .then(result => {
@@ -337,23 +334,28 @@
     function fetchPlans() {
       const type = document.getElementById('ins-type').value;
       const carType = document.getElementById('car-type').value;
-      const location = document.getElementById('car-location').value;
       const company = document.getElementById('ins-company').value;
+      
+      document.getElementById('ins-plan').innerHTML = '<option value="">-- เลือกแผนประกัน --</option>';
+      document.getElementById('ins-sum-insured').value = '';
+      document.getElementById('ins-premium').value = '';
+      updateLocationInput([]);
+
       if(!company || !type) return;
 
       fetch(GAS_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: 'getPlans', company: company, type: type, carType: carType, location: location })
+        body: JSON.stringify({ action: 'getPlans', company: company, type: type, carType: carType })
       })
       .then(res => res.json())
       .then(result => {
         if(result.status === 'success') {
-          availablePlansCache = result.data;
+          availablePlansCache = result.data || [];
           const planSelect = document.getElementById('ins-plan');
           planSelect.innerHTML = '<option value="">-- เลือกแผนประกัน --</option>';
           availablePlansCache.forEach((p, idx) => {
-            planSelect.innerHTML += `<option value="${idx}">${p.plan || 'ทั่วไป'} (ทุน: ${p.sumInsured})</option>`;
+            planSelect.innerHTML += `<option value="${idx}">${p.plan} (ทุน: ${p.sumInsured ? Number(p.sumInsured).toLocaleString() : '-'})</option>`;
           });
         }
       });
@@ -361,20 +363,52 @@
 
     function onPlanSelected() {
       const idx = document.getElementById('ins-plan').value;
-      if(idx === "") return;
+      if(idx === "") {
+        document.getElementById('ins-sum-insured').value = '';
+        document.getElementById('ins-premium').value = '';
+        updateLocationInput([]);
+        return;
+      }
+      
       const selected = availablePlansCache[idx];
       document.getElementById('ins-sum-insured').value = selected.sumInsured;
       document.getElementById('ins-premium').value = selected.grossPremium > 0 ? selected.grossPremium : '';
+      
+      if (selected.location && selected.location !== "-" && selected.location.trim() !== "") {
+        updateLocationInput([selected.location]);
+      } else {
+        updateLocationInput([]); 
+      }
+    }
+
+    function updateLocationInput(locations) {
+      const container = document.getElementById('location-container');
+      const existingEl = document.getElementById('car-location');
+      const currentValue = existingEl ? existingEl.value : "";
+
+      if (locations && locations.length > 0 && locations[0] !== "") {
+        let html = '<select id="car-location" class="border p-2 rounded w-full bg-white">';
+        html += '<option value="">-- เลือกพื้นที่ / เงื่อนไข --</option>';
+        locations.forEach(loc => {
+          const isSelected = (loc === currentValue || locations.length === 1) ? 'selected' : '';
+          html += `<option value="${loc}" ${isSelected}>${loc}</option>`;
+        });
+        html += '</select>';
+        container.innerHTML = html;
+      } else {
+        container.innerHTML = `<input type="text" id="car-location" value="${currentValue}" placeholder="ระบุพื้นที่ / เงื่อนไข (ถ้ามี)" class="border p-2 rounded w-full bg-white">`;
+      }
     }
 
     function addCompare() {
       const type = document.getElementById('ins-type').value;
       const carType = document.getElementById('car-type').value;
-      const location = document.getElementById('car-location').value;
+      const locElement = document.getElementById('car-location');
+      const location = locElement ? locElement.value : "";
       const sumInsured = document.getElementById('ins-sum-insured').value;
       const company = document.getElementById('ins-company').value;
       const planIdx = document.getElementById('ins-plan').value;
-      const plan = planIdx !== "" ? availablePlansCache[planIdx].plan : document.getElementById('ins-plan').value;
+      const plan = planIdx !== "" && availablePlansCache[planIdx] ? availablePlansCache[planIdx].plan : document.getElementById('ins-plan').value;
       const premium = document.getElementById('ins-premium').value;
 
       if(!type || !company || !premium) return alert("กรุณาเลือกประเภท บริษัท และระบุเบี้ยประกันให้ครบถ้วน");
@@ -391,7 +425,12 @@
         const item = { company, type, plan, carType, location, sumInsured, premium, commData, totalComm };
         comparisonItems.push(item);
         renderTable();
+        
+        document.getElementById('ins-plan').innerHTML = '<option value="">-- เลือกแผนประกัน --</option>';
+        document.getElementById('ins-sum-insured').value = '';
         document.getElementById('ins-premium').value = '';
+        updateLocationInput([]);
+        availablePlansCache = [];
       });
     }
 
@@ -428,10 +467,18 @@
 
     function openPreview() {
       if(comparisonItems.length === 0) return alert("กรุณาเพิ่มรายการเปรียบเทียบอย่างน้อย 1 รายการก่อน");
+      
+      const custName = document.getElementById('cust-name').value.trim();
+      const carReg = document.getElementById('car-reg').value.trim();
+
+      if (custName && carReg) {
+        autoSaveQuoteSilent();
+      }
+
       document.getElementById('preview-date').innerText = document.getElementById('current-date').innerText;
       document.getElementById('preview-agent').innerText = currentAgent.name;
-      document.getElementById('preview-cust').innerText = document.getElementById('cust-name').value || '-';
-      document.getElementById('preview-car').innerText = (document.getElementById('car-reg').value || '-') + ' (' + (document.getElementById('car-model').value || '-') + ')';
+      document.getElementById('preview-cust').innerText = custName || '-';
+      document.getElementById('preview-car').innerText = carReg + ' (' + (document.getElementById('car-model').value || '-') + ')';
 
       let tableHtml = `<table class="w-full border-collapse border text-xs text-center bg-white">
         <tr class="bg-gray-200"><th class="border p-1">บริษัท</th><th class="border p-1">แผนประกัน</th><th class="border p-1">ทุนประกัน</th><th class="border p-1">เบี้ยรวมสุทธิ</th></tr>`;
@@ -444,7 +491,6 @@
       
       document.getElementById('image-preview-container').classList.add('hidden');
       document.getElementById('image-output').innerHTML = '';
-      
       document.getElementById('pdf-preview-modal').classList.remove('hidden');
     }
 
@@ -452,63 +498,62 @@
       document.getElementById('pdf-preview-modal').classList.add('hidden');
     }
 
-    function convertA4ToImage() {
-      const element = document.getElementById('a4-document');
-      html2canvas(element, { scale: 2, useCORS: true }).then(canvas => {
-        const imgData = canvas.toDataURL("image/png");
-        
-        // 🟢 เปลี่ยนวิธีแสดงผลเพื่อให้มือถือเซฟรูปได้
-        const outputDiv = document.getElementById('image-output');
-        outputDiv.innerHTML = '';
-        
-        const imgElement = document.createElement('img');
-        imgElement.src = imgData;
-        imgElement.style.maxWidth = '100%';
-        imgElement.style.borderRadius = '8px';
-        imgElement.style.border = '1px solid #ccc';
-        
-        outputDiv.appendChild(imgElement);
-        
-        // แสดงกล่องรูปภาพขึ้นมา
-        document.getElementById('image-preview-container').classList.remove('hidden');
-
-        // แจ้งเตือนสั้นๆ ให้ผู้ใช้ทราบวิธีบันทึกบนมือถือ
-        alert("แปลงภาพสำเร็จ! กรุณากดค้างที่รูปภาพด้านล่างเพื่อบันทึกภาพลงมือถือครับ");
-        
-      }).catch(err => {
-        alert("ไม่สามารถแปลงตารางเป็นรูปภาพได้ กรุณาลองใหม่อีกครั้ง");
-      });
-    }
-
-    function saveAndSendLINE() {
-      const custName = document.getElementById('cust-name').value;
-      const carReg = document.getElementById('car-reg').value;
-      if(!custName || !carReg) return alert("กรุณากรอกชื่อลูกค้าและทะเบียนรถก่อนบันทึก");
-
-      const targetUserId = prompt("กรุณากรอก LINE User ID ของลูกค้าที่ต้องการส่งใบเสนอราคาไปให้:");
-      if (!targetUserId) return;
+    function autoSaveQuoteSilent() {
+      const custName = document.getElementById('cust-name').value.trim();
+      const carReg = document.getElementById('car-reg').value.trim();
+      if(!custName || !carReg) return;
 
       const actionType = editingQuoteId ? 'editQuote' : 'saveQuote';
+      const quotePayload = {
+        quoteId: editingQuoteId || "",
+        agentId: currentAgent.id,
+        customerName: custName,
+        carReg: carReg,
+        items: comparisonItems,
+        targetUserId: ""
+      };
 
       fetch(GAS_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ 
-          action: actionType, 
-          quoteData: { 
-            quoteId: editingQuoteId,
-            agentId: currentAgent.id, 
-            customerName: custName, 
-            carReg: carReg, 
-            items: comparisonItems,
-            targetUserId: targetUserId
-          } 
-        })
+        body: JSON.stringify({ action: actionType, quoteData: quotePayload })
+      })
+      .then(res => res.json())
+      .then(result => {
+        if(result.status === 'success' && result.quoteId && !editingQuoteId) {
+          editingQuoteId = result.quoteId;
+        }
+        loadAgentQuotations();
+      }).catch(err => console.error("AutoSave Error:", err));
+    }
+
+    function saveAndSendLINE() {
+      const custName = document.getElementById('cust-name').value.trim();
+      const carReg = document.getElementById('car-reg').value.trim();
+      if(!custName || !carReg) return alert("กรุณากรอกชื่อลูกค้าและทะเบียนรถก่อนบันทึก");
+      if(comparisonItems.length === 0) return alert("กรุณาเพิ่มรายการเปรียบเทียบอย่างน้อย 1 รายการก่อนบันทึก");
+
+      const targetUserId = prompt("กรุณากรอก LINE User ID ของลูกค้าที่ต้องการส่ง Flex (หรือกด Cancel เพื่อบันทึกเฉยๆ):") || "";
+      const actionType = editingQuoteId ? 'editQuote' : 'saveQuote';
+
+      const quotePayload = {
+        quoteId: editingQuoteId || "",
+        agentId: currentAgent.id,
+        customerName: custName,
+        carReg: carReg,
+        items: comparisonItems,
+        targetUserId: targetUserId
+      };
+
+      fetch(GAS_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: actionType, quoteData: quotePayload })
       })
       .then(res => res.json())
       .then(result => {
         if(result.status === 'success') {
-          alert("บันทึกและส่ง Flex Message ให้ลูกค้าเรียบร้อยแล้ว!");
+          alert(targetUserId ? "บันทึกและส่ง Flex Message ให้ลูกค้าเรียบร้อยแล้ว!" : "บันทึกข้อมูลเรียบร้อยแล้ว!");
           editingQuoteId = null;
           comparisonItems = [];
           renderTable();
@@ -516,22 +561,31 @@
           document.getElementById('car-reg').value = '';
           document.getElementById('car-model').value = '';
           loadAgentQuotations();
+        } else {
+          alert("เกิดข้อผิดพลาดในการบันทึก: " + (result.message || "ไม่ทราบสาเหตุ"));
         }
+      })
+      .catch(err => {
+        console.error("Save Error:", err);
+        alert("ไม่สามารถเชื่อมต่อเพื่อบันทึกข้อมูลได้");
       });
     }
 
     function loadAgentQuotations() {
+      if(!currentAgent || (!currentAgent.id && !currentUserLineId)) return;
+      const searchId = currentAgent.id || currentUserLineId;
+
       fetch(GAS_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: 'getAgentQuotes', agentId: currentAgent.id })
+        body: JSON.stringify({ action: 'getAgentQuotes', agentId: searchId })
       })
       .then(res => res.json())
       .then(result => {
         if(result.status === 'success') {
           const tbody = document.getElementById('quotation-history-body');
-          window.myQuotesCache = result.quotes;
-          if(result.quotes.length === 0) {
+          window.myQuotesCache = result.quotes || [];
+          if(!result.quotes || result.quotes.length === 0) {
             tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-gray-400">ยังไม่มีประวัติใบเสนอราคา</td></tr>`;
             return;
           }
@@ -551,7 +605,8 @@
               </tr>`;
           });
         }
-      });
+      })
+      .catch(err => console.error("Load Quotes Error:", err));
     }
 
     function editQuote(index) {
@@ -569,7 +624,7 @@
       }
 
       renderTable();
-      alert(`กำลังโหลดใบเสนอราคา ${q.quoteId} เพื่อแก้ไข`);
+      alert(`กำลังโหลดใบเสนอราคา ${q.quoteId} เพื่อแก้ไข สามารถปรับเปลี่ยนข้อมูลแล้วกดส่ง Flex หรือดูตัวอย่างเพื่อบันทึกทับได้ทันที`);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
@@ -586,18 +641,82 @@
       });
     }
 
-    // ฟังก์ชันเช็คว่าถ้าเลือกประเภทรถเป็น "อื่นๆ" ให้แสดงช่องกรอกข้อความ
-  function checkCarTypeOther() {
-    const carTypeSelect = document.getElementById('car-type');
-    const otherInput = document.getElementById('car-type-other');
-    if (carTypeSelect.value === 'อื่นๆ') {
-      otherInput.classList.remove('hidden');
-      otherInput.focus();
-    } else {
-      otherInput.classList.add('hidden');
-      otherInput.value = '';
+    function checkCarTypeOther() {
+      const carTypeSelect = document.getElementById('car-type');
+      const otherInput = document.getElementById('car-type-other');
+      if (carTypeSelect.value === 'อื่นๆ') {
+        otherInput.classList.remove('hidden');
+        otherInput.focus();
+      } else {
+        otherInput.classList.add('hidden');
+        otherInput.value = '';
+      }
     }
-  }
+
+    function convertA4ToImage() {
+      const element = document.getElementById('a4-document');
+      html2canvas(element, { scale: 2, useCORS: true }).then(canvas => {
+        const imgData = canvas.toDataURL("image/png");
+        const outputDiv = document.getElementById('image-output');
+        outputDiv.innerHTML = '';
+        const imgElement = document.createElement('img');
+        imgElement.src = imgData;
+        imgElement.style.maxWidth = '100%';
+        imgElement.style.borderRadius = '8px';
+        imgElement.style.border = '1px solid #ccc';
+        outputDiv.appendChild(imgElement);
+        document.getElementById('image-preview-container').classList.remove('hidden');
+        alert("แปลงภาพสำเร็จ! กรุณากดค้างที่รูปภาพด้านล่างเพื่อบันทึกภาพลงมือถือครับ");
+      }).catch(err => {
+        alert("ไม่สามารถแปลงตารางเป็นรูปภาพได้ กรุณาลองใหม่อีกครั้ง");
+      });
+    }
+
+    function sendFlexFromPreview() {
+      const custName = document.getElementById('cust-name').value.trim();
+      const carReg = document.getElementById('car-reg').value.trim();
+      if(!custName || !carReg) return alert("กรุณากรอกชื่อลูกค้าและทะเบียนรถก่อนส่ง");
+      if(comparisonItems.length === 0) return alert("ไม่มีรายการเปรียบเทียบ");
+
+      const targetUserId = prompt("กรุณากรอก LINE User ID ของลูกค้าที่ต้องการส่ง Flex Message:");
+      if (!targetUserId) return;
+
+      const actionType = editingQuoteId ? 'editQuote' : 'saveQuote';
+      const quotePayload = {
+        quoteId: editingQuoteId || "",
+        agentId: currentAgent.id,
+        customerName: custName,
+        carReg: carReg,
+        items: comparisonItems,
+        targetUserId: targetUserId
+      };
+
+      fetch(GAS_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: actionType, quoteData: quotePayload })
+      })
+      .then(res => res.json())
+      .then(result => {
+        if(result.status === 'success') {
+          alert("บันทึกและส่ง Flex Message ให้ลูกค้าเรียบร้อยแล้ว!");
+          closePreview();
+          editingQuoteId = null;
+          comparisonItems = [];
+          renderTable();
+          document.getElementById('cust-name').value = '';
+          document.getElementById('car-reg').value = '';
+          document.getElementById('car-model').value = '';
+          loadAgentQuotations();
+        } else {
+          alert("เกิดข้อผิดพลาด: " + (result.message || "ไม่ทราบสาเหตุ"));
+        }
+      })
+      .catch(err => {
+        console.error("Preview Send Error:", err);
+        alert("ไม่สามารถเชื่อมต่อเพื่อส่งข้อความได้");
+      });
+    }
   </script>
 </body>
 </html>
