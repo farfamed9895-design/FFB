@@ -498,6 +498,7 @@
       document.getElementById('pdf-preview-modal').classList.add('hidden');
     }
 
+    // 1. แก้ไขฟังก์ชันบันทึกเงียบตอนพรีวิว A4 (ไม่บังคับส่งข้อความ เว้นแต่กดปุ่มส่ง)
     function autoSaveQuoteSilent() {
       const custName = document.getElementById('cust-name').value.trim();
       const carReg = document.getElementById('car-reg').value.trim();
@@ -510,7 +511,7 @@
         customerName: custName,
         carReg: carReg,
         items: comparisonItems,
-        targetUserId: ""
+        targetUserId: "" // พรีวิว A4 บันทึกเก็บชีตเฉยๆ ยังไม่ยิงข้อความออกจนกว่าจะกดปุ่มส่ง
       };
 
       fetch(GAS_API_URL, {
@@ -521,19 +522,21 @@
       .then(res => res.json())
       .then(result => {
         if(result.status === 'success' && result.quoteId && !editingQuoteId) {
-          editingQuoteId = result.quoteId;
+          editingQuoteId = result.quoteId; 
         }
         loadAgentQuotations();
       }).catch(err => console.error("AutoSave Error:", err));
     }
 
+    // 2. ฟังก์ชันกดส่ง Flex จากหน้าจอหลัก
     function saveAndSendLINE() {
       const custName = document.getElementById('cust-name').value.trim();
       const carReg = document.getElementById('car-reg').value.trim();
       if(!custName || !carReg) return alert("กรุณากรอกชื่อลูกค้าและทะเบียนรถก่อนบันทึก");
       if(comparisonItems.length === 0) return alert("กรุณาเพิ่มรายการเปรียบเทียบอย่างน้อย 1 รายการก่อนบันทึก");
 
-      const targetUserId = prompt("กรุณากรอก LINE User ID ของลูกค้าที่ต้องการส่ง Flex (หรือกด Cancel เพื่อบันทึกเฉยๆ):") || "";
+      // บังคับหรือเปิดช่องให้ใส่ User ID เพื่อให้ระบบรู้ว่าจะส่งหาใคร
+      const targetUserId = prompt("กรุณากรอก LINE User ID ของลูกค้าที่ต้องการส่ง Flex Message (ถ้าไม่ใส่ ระบบจะบันทึกเก็บประวัติไว้เฉยๆ):") || "";
       const actionType = editingQuoteId ? 'editQuote' : 'saveQuote';
 
       const quotePayload = {
@@ -542,7 +545,7 @@
         customerName: custName,
         carReg: carReg,
         items: comparisonItems,
-        targetUserId: targetUserId
+        targetUserId: targetUserId // ส่ง ID นี้ไปให้ GAS ยิงข้อความเข้ากลุ่มและหาลูกค้า
       };
 
       fetch(GAS_API_URL, {
@@ -553,7 +556,11 @@
       .then(res => res.json())
       .then(result => {
         if(result.status === 'success') {
-          alert(targetUserId ? "บันทึกและส่ง Flex Message ให้ลูกค้าเรียบร้อยแล้ว!" : "บันทึกข้อมูลเรียบร้อยแล้ว!");
+          if (editingQuoteId) {
+            alert(targetUserId ? "อัปเดตข้อมูลและส่ง Flex Message ให้ลูกค้าใหม่เรียบร้อยแล้ว!" : "อัปเดตข้อมูลใบเสนอราคาเรียบร้อยแล้ว!");
+          } else {
+            alert(targetUserId ? "บันทึกและส่ง Flex Message ให้ลูกค้าเรียบร้อยแล้ว!" : "บันทึกข้อมูลเรียบร้อยแล้ว!");
+          }
           editingQuoteId = null;
           comparisonItems = [];
           renderTable();
@@ -568,6 +575,53 @@
       .catch(err => {
         console.error("Save Error:", err);
         alert("ไม่สามารถเชื่อมต่อเพื่อบันทึกข้อมูลได้");
+      });
+    }
+
+    // 3. ฟังก์ชันกดส่ง Flex จากหน้าต่างพรีวิว A4 โดยตรง (ทำงานจริง 100%)
+    function sendFlexFromPreview() {
+      const custName = document.getElementById('cust-name').value.trim();
+      const carReg = document.getElementById('car-reg').value.trim();
+      if(!custName || !carReg) return alert("กรุณากรอกชื่อลูกค้าและทะเบียนรถก่อนส่ง");
+      if(comparisonItems.length === 0) return alert("ไม่มีรายการเปรียบเทียบ");
+
+      const targetUserId = prompt("กรุณากรอก LINE User ID ของลูกค้าที่ต้องการส่ง Flex Message:");
+      if (!targetUserId) return; // ถ้าไม่กรอกหรือกดยกเลิก ให้หยุดการทำงาน
+
+      const actionType = editingQuoteId ? 'editQuote' : 'saveQuote';
+      const quotePayload = {
+        quoteId: editingQuoteId || "",
+        agentId: currentAgent.id,
+        customerName: custName,
+        carReg: carReg,
+        items: comparisonItems,
+        targetUserId: targetUserId // ส่ง ID นี้ไปยิงข้อความจริง
+      };
+
+      fetch(GAS_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: actionType, quoteData: quotePayload })
+      })
+      .then(res => res.json())
+      .then(result => {
+        if(result.status === 'success') {
+          alert("บันทึกและส่ง Flex Message ให้ลูกค้าเรียบร้อยแล้ว!");
+          closePreview(); // ปิดหน้าต่างพรีวิว
+          editingQuoteId = null;
+          comparisonItems = [];
+          renderTable();
+          document.getElementById('cust-name').value = '';
+          document.getElementById('car-reg').value = '';
+          document.getElementById('car-model').value = '';
+          loadAgentQuotations();
+        } else {
+          alert("เกิดข้อผิดพลาด: " + (result.message || "ไม่ทราบสาเหตุ"));
+        }
+      })
+      .catch(err => {
+        console.error("Preview Send Error:", err);
+        alert("ไม่สามารถเชื่อมต่อเพื่อส่งข้อความได้");
       });
     }
 
