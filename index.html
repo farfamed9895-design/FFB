@@ -60,41 +60,47 @@
       <h3 class="font-bold mb-3 text-gray-800">1. เลือกแบบประกันและเงื่อนไขรถยนต์</h3>
       
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-        <!-- ประเภทประกันดึงจากชีตอัตโนมัติ -->
-        <select id="ins-type" onchange="fetchPlans()" class="border p-2 rounded w-full">
+        <!-- ประเภทประกัน -->
+        <select id="ins-type" onchange="fetchPlans()" class="border p-2 rounded w-full bg-white text-black">
           <option value="">-- ประเภทประกัน --</option>
         </select>
 
-        <!-- บริษัทประกันดึงจากชีตอัตโนมัติ -->
-        <select id="ins-company" onchange="fetchPlans()" class="border p-2 rounded w-full">
+        <!-- บริษัทประกัน -->
+        <select id="ins-company" onchange="fetchPlans()" class="border p-2 rounded w-full bg-white text-black">
           <option value="">-- เลือกบริษัทฯ ประกัน --</option>
         </select>
       </div>
 
       <div class="mb-3">
-        <select id="ins-plan" onchange="onPlanSelected()" class="border p-2 rounded w-full">
+        <!-- เลือกแผนประกัน -->
+        <select id="ins-plan" onchange="onPlanSelected()" class="border p-2 rounded w-full bg-white text-black">
           <option value="">-- เลือกแผนประกัน --</option>
         </select>
       </div>
 
+      <!-- ลำดับ: แผนประกัน -> ทุนประกัน -> ประเภทรถ -> พื้นที่ -> เบี้ยประกัน -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+        <div id="sum-insured-container">
+          <select id="ins-sum-insured" class="border p-2 rounded w-full bg-white text-black">
+            <option value="">-- เลือกทุนประกัน --</option>
+          </select>
+        </div>
+
         <div>
-          <!-- 🟢 ประเภทรถดึงจากคอลัมน์ D ในชีตอัตโนมัติ -->
-          <select id="car-type" onchange="checkCarTypeOther(); fetchPlans();" class="border p-2 rounded w-full">
+          <select id="car-type" onchange="checkCarTypeOther(); calculateFinalPremium();" class="border p-2 rounded w-full bg-white text-black">
             <option value="">-- เลือกประเภทรถ --</option>
           </select>
           <input type="text" id="car-type-other" placeholder="ระบุประเภทรถ..." class="border p-2 rounded w-full mt-2 hidden">
         </div>
-
-        <div id="location-container">
-          <select id="car-location" class="border p-2 rounded w-full">
-            <option value="">-- เลือกพื้นที่ / เงื่อนไข --</option>
-          </select>
-        </div>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-        <input type="text" id="ins-sum-insured" placeholder="ทุนประกัน (พิมพ์กรอกเองได้)" class="border p-2 rounded w-full bg-white">
+        <div id="location-container">
+          <select id="car-location" onchange="calculateFinalPremium()" class="border p-2 rounded w-full bg-white text-black">
+            <option value="">-- เลือกพื้นที่ / เงื่อนไข --</option>
+          </select>
+        </div>
+
         <input type="number" id="ins-premium" placeholder="เบี้ยรวมสุทธิ (บาท)" class="border p-2 rounded w-full bg-yellow-50">
       </div>
 
@@ -170,7 +176,7 @@
 
   </div>
 
-  <!-- Modal A4 (หน้าต่างดูตัวอย่างเอกสาร) -->
+  <!-- Modal A4 -->
   <div id="pdf-preview-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-2">
     <div class="bg-white w-full max-w-2xl p-6 rounded shadow-lg max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center border-b pb-3 mb-4">
@@ -197,7 +203,6 @@
         <div id="image-output" class="border p-2 rounded bg-gray-50 flex justify-center"></div>
       </div>
 
-      <!-- ปุ่มจัดการใน Modal A4 -->
       <div class="flex flex-col md:flex-row gap-2 mt-4">
         <button onclick="convertA4ToImage()" class="w-full bg-red-600 text-white py-2 rounded font-bold hover:bg-red-700">📥 แปลงตารางเป็นรูปภาพ (เซฟ/แชร์)</button>
         <button onclick="sendFlexFromPreview()" class="w-full bg-green-600 text-white py-2 rounded font-bold hover:bg-green-700">💬 ส่ง Flex Message ให้ลูกค้า</button>
@@ -308,7 +313,6 @@
       });
     }
 
-    // 🟢 ฟังก์ชันดึงข้อมูลแบบไดนามิก (บริษัท, ประเภทประกัน, ประเภทรถ) จาก Google Sheet อัตโนมัติ
     function loadMetadata() {
       fetch(GAS_API_URL, {
         method: 'POST',
@@ -318,7 +322,6 @@
       .then(res => res.json())
       .then(result => {
         if(result.status === 'success') {
-          // 1. บริษัทประกัน
           const selectComp = document.getElementById('ins-company');
           selectComp.innerHTML = '<option value="">-- เลือกบริษัทฯ ประกัน --</option>';
           if(result.companies) {
@@ -327,7 +330,6 @@
             });
           }
 
-          // 2. ประเภทประกัน
           const selectType = document.getElementById('ins-type');
           selectType.innerHTML = '<option value="">-- ประเภทประกัน --</option>';
           if(result.types) {
@@ -336,7 +338,6 @@
             });
           }
 
-          // 3. 🟢 ประเภทรถ (ดึงจากคอลัมน์ D อัตโนมัติ)
           const selectCarType = document.getElementById('car-type');
           selectCarType.innerHTML = '<option value="">-- เลือกประเภทรถ --</option>';
           if(result.carTypes) {
@@ -351,11 +352,10 @@
 
     function fetchPlans() {
       const type = document.getElementById('ins-type').value;
-      const carType = document.getElementById('car-type').value;
       const company = document.getElementById('ins-company').value;
       
       document.getElementById('ins-plan').innerHTML = '<option value="">-- เลือกแผนประกัน --</option>';
-      document.getElementById('ins-sum-insured').value = '';
+      document.getElementById('sum-insured-container').innerHTML = `<select id="ins-sum-insured" class="border p-2 rounded w-full bg-white text-black"><option value="">-- เลือกทุนประกัน --</option></select>`;
       document.getElementById('ins-premium').value = '';
       updateLocationInput([]);
 
@@ -364,7 +364,7 @@
       fetch(GAS_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: 'getPlans', company: company, type: type, carType: carType })
+        body: JSON.stringify({ action: 'getPlans', company: company, type: type, carType: '' })
       })
       .then(res => res.json())
       .then(result => {
@@ -372,31 +372,118 @@
           availablePlansCache = result.data || [];
           const planSelect = document.getElementById('ins-plan');
           planSelect.innerHTML = '<option value="">-- เลือกแผนประกัน --</option>';
-          availablePlansCache.forEach((p, idx) => {
-            planSelect.innerHTML += `<option value="${idx}">${p.plan} (ทุน: ${p.sumInsured ? Number(p.sumInsured).toLocaleString() : '-'})</option>`;
+          
+          let uniquePlans = [];
+          availablePlansCache.forEach((p) => {
+            if (!uniquePlans.includes(p.plan)) {
+              uniquePlans.push(p.plan);
+              planSelect.innerHTML += `<option value="${p.plan}">${p.plan}</option>`;
+            }
           });
         }
       });
     }
 
     function onPlanSelected() {
-      const idx = document.getElementById('ins-plan').value;
-      if(idx === "") {
-        document.getElementById('ins-sum-insured').value = '';
-        document.getElementById('ins-premium').value = '';
+      const selectedPlanName = document.getElementById('ins-plan').value;
+      const container = document.getElementById('sum-insured-container');
+      
+      document.getElementById('ins-premium').value = ''; 
+
+      if(!selectedPlanName) {
+        container.innerHTML = `<select id="ins-sum-insured" class="border p-2 rounded w-full bg-white text-black"><option value="">-- เลือกทุนประกัน --</option></select>`;
         updateLocationInput([]);
         return;
       }
       
-      const selected = availablePlansCache[idx];
-      document.getElementById('ins-sum-insured').value = selected.sumInsured;
-      document.getElementById('ins-premium').value = selected.grossPremium > 0 ? selected.grossPremium : '';
+      const matchedPlans = availablePlansCache.filter(p => p.plan === selectedPlanName);
       
-      if (selected.location && selected.location !== "-" && selected.location.trim() !== "") {
-        updateLocationInput([selected.location]);
+      let sumList = [];
+      matchedPlans.forEach(p => {
+        if (p.sumInsuredList && p.sumInsuredList.length > 0) {
+          p.sumInsuredList.forEach(s => {
+            if (s && s !== "" && s !== "-" && !sumList.includes(String(s))) {
+              sumList.push(String(s));
+            }
+          });
+        } else if (p.sumInsured && p.sumInsured !== "" && p.sumInsured !== "-" && !sumList.includes(String(p.sumInsured))) {
+          sumList.push(String(p.sumInsured));
+        }
+      });
+
+      if (sumList.length > 0) {
+        if (sumList.length === 1) {
+          container.innerHTML = `<input type="text" id="ins-sum-insured" value="${sumList[0]}" readonly class="border p-2 rounded w-full bg-gray-100 text-black">`;
+        } else {
+          let html = '<select id="ins-sum-insured" onchange="calculateFinalPremium()" class="border p-2 rounded w-full bg-white text-black">';
+          html += '<option value="">-- เลือกทุนประกัน --</option>';
+          sumList.forEach(sum => {
+            html += `<option value="${sum}">${Number(sum).toLocaleString()} บาท</option>`;
+          });
+          html += '</select>';
+          container.innerHTML = html;
+        }
       } else {
-        updateLocationInput([]); 
+        container.innerHTML = `<input type="text" id="ins-sum-insured" placeholder="กรอกทุนประกัน..." oninput="calculateFinalPremium()" class="border p-2 rounded w-full bg-white text-black">`;
       }
+
+      let locList = [];
+      matchedPlans.forEach(p => {
+        if (p.locations && p.locations.length > 0) {
+          p.locations.forEach(l => {
+            if (l && l !== "-" && l.trim() !== "" && !locList.includes(l)) {
+              locList.push(l);
+            }
+          });
+        } else if (p.location && p.location !== "-" && p.location.trim() !== "" && !locList.includes(p.location)) {
+          locList.push(p.location);
+        }
+      });
+      updateLocationInput(locList);
+      calculateFinalPremium();
+    }
+
+    function calculateFinalPremium() {
+      const type = document.getElementById('ins-type').value;
+      const company = document.getElementById('ins-company').value;
+      const selectedPlanName = document.getElementById('ins-plan').value;
+      const carType = document.getElementById('car-type').value;
+      const locElement = document.getElementById('car-location');
+      const location = locElement ? locElement.value : "";
+      const sumInsuredEl = document.getElementById('ins-sum-insured');
+      const sumInsured = sumInsuredEl ? sumInsuredEl.value : "";
+
+      if (!type || !company || !selectedPlanName || !sumInsured || !carType) {
+        document.getElementById('ins-premium').value = '';
+        return;
+      }
+
+      fetch(GAS_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ 
+          action: 'getCommRate', 
+          company: company, 
+          type: type, 
+          plan: selectedPlanName, 
+          carType: carType, 
+          location: location, 
+          sumInsured: sumInsured, 
+          premium: 0, 
+          level: currentAgent ? currentAgent.level : 'AG' 
+        })
+      })
+      .then(res => res.json())
+      .then(result => {
+        if (result.status === 'success' && result.data && result.data.grossPremium > 0) {
+          document.getElementById('ins-premium').value = result.data.grossPremium;
+        } else {
+          document.getElementById('ins-premium').value = '';
+        }
+      })
+      .catch(err => {
+        console.error("Calculate Premium Error:", err);
+      });
     }
 
     function updateLocationInput(locations) {
@@ -405,7 +492,7 @@
       const currentValue = existingEl ? existingEl.value : "";
 
       if (locations && locations.length > 0 && locations[0] !== "") {
-        let html = '<select id="car-location" class="border p-2 rounded w-full bg-white">';
+        let html = '<select id="car-location" onchange="calculateFinalPremium()" class="border p-2 rounded w-full bg-white text-black">';
         html += '<option value="">-- เลือกพื้นที่ / เงื่อนไข --</option>';
         locations.forEach(loc => {
           const isSelected = (loc === currentValue || locations.length === 1) ? 'selected' : '';
@@ -414,7 +501,7 @@
         html += '</select>';
         container.innerHTML = html;
       } else {
-        container.innerHTML = `<input type="text" id="car-location" value="${currentValue}" placeholder="ระบุพื้นที่ / เงื่อนไข (ถ้ามี)" class="border p-2 rounded w-full bg-white">`;
+        container.innerHTML = `<input type="text" id="car-location" value="${currentValue}" placeholder="ระบุพื้นที่ / เงื่อนไข (ถ้ามี)" oninput="calculateFinalPremium()" class="border p-2 rounded w-full bg-white text-black">`;
       }
     }
 
@@ -423,33 +510,30 @@
       const carType = document.getElementById('car-type').value;
       const locElement = document.getElementById('car-location');
       const location = locElement ? locElement.value : "";
-      const sumInsured = document.getElementById('ins-sum-insured').value;
+      const sumInsuredEl = document.getElementById('ins-sum-insured');
+      const sumInsured = sumInsuredEl ? sumInsuredEl.value : "";
       const company = document.getElementById('ins-company').value;
-      const planIdx = document.getElementById('ins-plan').value;
-      const plan = planIdx !== "" && availablePlansCache[planIdx] ? availablePlansCache[planIdx].plan : document.getElementById('ins-plan').value;
+      const planName = document.getElementById('ins-plan').value;
       const premium = document.getElementById('ins-premium').value;
 
-      if(!type || !company || !premium) return alert("กรุณาเลือกประเภท บริษัท และระบุเบี้ยประกันให้ครบถ้วน");
+      if(!type || !company || !planName || !sumInsured || !premium) return alert("กรุณากรอกข้อมูลการเปรียบเทียบให้ครบถ้วน");
 
       fetch(GAS_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: 'getCommRate', company: company, type: type, plan: plan, carType: carType, location: location, sumInsured: sumInsured, premium: premium, level: currentAgent.level })
+        body: JSON.stringify({ action: 'getCommRate', company: company, type: type, plan: planName, carType: carType, location: location, sumInsured: sumInsured, premium: premium, level: currentAgent.level })
       })
       .then(res => res.json())
       .then(result => {
         const commData = (result.status === 'success') ? result.data.commBreakdown : {};
         const totalComm = (result.status === 'success') ? result.data.totalComm : 0;
-        const item = { company, type, plan, carType, location, sumInsured, premium, commData, totalComm };
+        const item = { company, type, plan: planName, carType, location, sumInsured, premium, commData, totalComm };
         comparisonItems.push(item);
         renderTable();
         
-        // 🟢 ปรับปรุงให้หลังกดเพิ่มเปรียบเทียบ สามารถเลือกบริษัท แผน หรือเปลี่ยนประเภทประกันต่อได้ทันทีโดยไม่ล้างค่าทั้งหมดทิ้ง
-        document.getElementById('ins-plan').innerHTML = '<option value="">-- เลือกแผนประกัน --</option>';
-        document.getElementById('ins-sum-insured').value = '';
+        // 🟢 เอาคำสั่งเคลียร์ค่าทิ้งออก เพื่อให้ช่องตัวเลือกด้านบน (ประเภท, บริษัท, แผน, ทุน) ยังคงค้างค่าเดิมไว้ให้แก้ไขเปรียบเทียบต่อได้ทันที
+        // (เคลียร์เฉพาะช่องเบี้ยประกันสุทธิ เพื่อรอคำนวณใหม่เมื่อเปลี่ยนข้อมูล)
         document.getElementById('ins-premium').value = '';
-        updateLocationInput([]);
-        availablePlansCache = [];
       });
     }
 
